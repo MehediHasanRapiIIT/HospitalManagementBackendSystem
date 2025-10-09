@@ -3,6 +3,7 @@ package com.learning.hospitalmanagement;
 import com.learning.hospitalmanagement.entity.Patient;
 import com.learning.hospitalmanagement.entity.type.BloodGroupType;
 import com.learning.hospitalmanagement.repository.PatientRepository;
+import com.learning.hospitalmanagement.service.PatientService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,9 +18,12 @@ public class PatientTest {
     @Autowired
     private PatientRepository patientRepository;
 
+    @Autowired
+    private PatientService patientService;
+
     @Test
     public void findAllPatients() {
-       List<Patient> patientList = patientRepository.findAll();
+       List<Patient> patientList = patientRepository.findAllPatientWithAppointment();
         System.out.println(patientList);
     }
     @Test
