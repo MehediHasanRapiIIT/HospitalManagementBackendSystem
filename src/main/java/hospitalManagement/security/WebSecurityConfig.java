@@ -49,6 +49,11 @@ public class WebSecurityConfig {
                 .sessionManagement(sessionConfig ->
                         sessionConfig.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth-> auth
+                                .requestMatchers(
+                                        "/v3/api-docs/**",
+                                        "/swagger-ui/**",
+                                        "/swagger-ui.html"
+                                ).permitAll()
                         .requestMatchers("/public/**","/auth/**").permitAll().requestMatchers(HttpMethod.DELETE, "/admin/**")
                                 .hasAnyAuthority(APPOINTMENT_DELETE.name(),
                                         USER_MANAGE.name())
