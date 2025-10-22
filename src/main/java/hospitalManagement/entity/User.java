@@ -3,6 +3,7 @@ package hospitalManagement.entity;
 
 import hospitalManagement.entity.type.AuthProviderType;
 import hospitalManagement.entity.type.RoleType;
+import hospitalManagement.security.RolePermissionMapping;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -46,8 +47,18 @@ public class User implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
 
-        return roles.stream()
-                .map(role-> new SimpleGrantedAuthority("ROLE_" + role.name()))
-                .collect(Collectors.toList());
+//        return roles.stream()
+//                .map(role-> new SimpleGrantedAuthority("ROLE_" + role.name()))
+//                .collect(Collectors.toList());
+        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
+
+        roles.forEach(
+                role->{
+                    Set<SimpleGrantedAuthority> permissions = RolePermissionMapping.getAthoritiesByRole(role);
+                    authorities.addAll(permissions);
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name()));
+                }
+        );
+        return authorities;
     }
 }
