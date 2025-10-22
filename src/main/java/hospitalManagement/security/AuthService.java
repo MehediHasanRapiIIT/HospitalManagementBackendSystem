@@ -2,9 +2,13 @@ package hospitalManagement.security;
 
 import hospitalManagement.dto.LoginRequestDto;
 import hospitalManagement.dto.LoginResponseDto;
+import hospitalManagement.dto.SignUpRequestDto;
 import hospitalManagement.dto.SignupResponseDto;
+import hospitalManagement.entity.Patient;
 import hospitalManagement.entity.User;
 import hospitalManagement.entity.type.AuthProviderType;
+import hospitalManagement.entity.type.RoleType;
+import hospitalManagement.repository.PatientRepository;
 import hospitalManagement.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +22,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -25,6 +31,7 @@ public class AuthService {
     private final AuthUtil authUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PatientRepository patientRepository;
 
     public LoginResponseDto login(LoginRequestDto loginRequestDto) {
         Authentication authentication = authenticationManager.authenticate(
@@ -40,7 +47,7 @@ public class AuthService {
         return new LoginResponseDto(token, user.getId());
     }
 
-    public User signUpInternal(LoginRequestDto signupRequestDto, AuthProviderType authProviderType, String providerId) {
+    public User signUpInternal(SignUpRequestDto signupRequestDto, AuthProviderType authProviderType, String providerId) {
         User user = userRepository.findByUsername(signupRequestDto.getUsername()).orElse(null);
         if (user != null) {
             throw new RuntimeException("Username already exists");
@@ -50,16 +57,27 @@ public class AuthService {
                 .username(signupRequestDto.getUsername())
                  .providerId(providerId)
                  .providerType(authProviderType)
+                 .roles(signupRequestDto.getRoles())
                 .build();
         if(authProviderType == AuthProviderType.EMAIL){
             user.setPassword(passwordEncoder.encode(signupRequestDto.getPassword()));
         }
 
-        return userRepository.save(user);
+        user = userRepository.save(user);
+        Patient patient = Patient.builder()
+                .name(signupRequestDto.getName())
+                .email(signupRequestDto.getUsername())
+                .user(user)
+                .build();
+        patientRepository.save(patient);
+
+        return user;
+
+
 
     }
 
-    public SignupResponseDto signup(LoginRequestDto signupRequestDto) {
+    public SignupResponseDto signup(SignUpRequestDto signupRequestDto) {
 
         User user = signUpInternal(signupRequestDto, AuthProviderType.EMAIL, null);
 
@@ -76,6 +94,7 @@ public class AuthService {
         User user = userRepository.findByProviderIdAndProviderType(providerId, providerType).orElse(null);
 
         String email = oAuth2User.getAttribute("email");
+        String name = oAuth2User.getAttribute("name");
 
         User emailUser = userRepository.findByUsername(email).orElse(null);
 
@@ -85,7 +104,7 @@ public class AuthService {
                     determineUsernameFromOAuth2User
                             (oAuth2User, registrationId, providerId);
 
-            user = signUpInternal(new LoginRequestDto(username,null), providerType, providerId);
+            user = signUpInternal(new SignUpRequestDto(username,null,name,Set.of(RoleType.PATIENT)), providerType, providerId);
 
         }else if(user !=null){
             //Login flow
@@ -101,8 +120,8 @@ public class AuthService {
         LoginResponseDto loginResponseDto = new LoginResponseDto(authUtil.generateAccessToken(user), user.getId());
         return ResponseEntity.ok(loginResponseDto);
 
-        //fetch providertype And Provider Id
-        //save prividerType and providerId in user
+        //fetch provider_type And Provider_Id
+        //save providerType and providerId in user
         //if the user has an account the login
         //otherwise create an account
 

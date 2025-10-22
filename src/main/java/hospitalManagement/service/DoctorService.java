@@ -2,7 +2,13 @@ package hospitalManagement.service;
 
 
 import hospitalManagement.dto.DoctorResponseDto;
+import hospitalManagement.dto.OnboardDoctorRequestDto;
+import hospitalManagement.entity.Doctor;
+import hospitalManagement.entity.User;
+import hospitalManagement.entity.type.RoleType;
 import hospitalManagement.repository.DoctorRepository;
+import hospitalManagement.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -18,6 +24,7 @@ public class DoctorService {
 
     private final DoctorRepository doctorRepository;
     private final ModelMapper modelMapper;
+    private final UserRepository userRepository;
 
     public List<DoctorResponseDto> getAllDoctors() {
         return doctorRepository.findAll()
@@ -27,4 +34,23 @@ public class DoctorService {
     }
 
 
+    @Transactional
+    public DoctorResponseDto onBoardNewDoctor(OnboardDoctorRequestDto onboardDoctorRequestDto) throws IllegalAccessException {
+
+        User user = userRepository.findById(onboardDoctorRequestDto.getUserId()).orElseThrow();
+
+        if(doctorRepository.existsById(onboardDoctorRequestDto.getUserId())){
+            throw new IllegalAccessException("Already a doctor with user id: " + onboardDoctorRequestDto.getUserId());
+        }
+
+        Doctor doctor = Doctor.builder()
+                .name(onboardDoctorRequestDto.getName())
+                .specialization(onboardDoctorRequestDto.getSpecialization())
+                .user(user)
+                .build();
+
+        user.getRoles().add(RoleType.DOCTOR);
+        return modelMapper.map(doctorRepository.save(doctor), DoctorResponseDto.class);
+
+    }
 }
